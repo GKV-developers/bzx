@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bzx"
+version = "0.1.0"
+description = "A Python package for BOOZ_XFORM output to GKV input"
+authors = [
+    { name = "Shinya Maeyama", email = "maeyama.shinya@nifs.ac.jp" }
+]
+readme = "README.md"
+license = {text = "MIT License"}
+requires-python = ">=3.7"
+
+dependencies = [
+    "numpy>=1.23",
+    "scipy>=1.15",
+    "xarray>=2022.3",
+]
+
+[project.optional-dependencies]
+examples = [
+    "matplotlib>=3.5",
+    "booz_xform>=0.0.8",
+    #vmecpp @ git+https://github.com/proximafusion/vmecpp.git",
+]
+
+[tool.setuptools]
+packages = ["bzx"]
+package-dir = {"" = "src"}
+

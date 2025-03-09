@@ -1,0 +1,5 @@
+# Core dependencies
+numpy>=1.23.1
+scipy>=1.15.2
+xarray>=2022.3.0
+
