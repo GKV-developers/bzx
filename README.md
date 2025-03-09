@@ -14,6 +14,7 @@ Or install the latest development version from GitHub:
 ```bash
 pip install git+https://github.com/GKV-developers/bzx.git
 ```
+If your environment has any problems with installation, you can copy the single source script file `bzx.py` from the `src/bzx/` directory and use it. 
 
 ## Usage
 
@@ -40,7 +41,7 @@ bzx(Ntheta_gkv, nrho, ntht, nzeta, alpha_fix,
 
 
 #### **(ii) Example of workflow: From VMEC to GKV via BOOZ_XFORM and BZX**
-The script [`examples/run_vmecpp_boozxform_bzx.py`](examples/run_vmecpp_boozxform_bzx.py) demonstrats how to use **BZX**, starting from generating an equilibrium.
+The script [`examples/run_vmecpp_boozxform_bzx.ipynb`](examples/run_vmecpp_boozxform_bzx.ipynb) demonstrats how to use **BZX**, starting from generating an equilibrium.
 
 - Step 1: Compute a MHD equilibrium using **VMEC++**
     - About **VMEC++** : 
