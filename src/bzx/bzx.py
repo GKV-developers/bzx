@@ -1408,7 +1408,7 @@ def input_from_boozmn(fname_boozmn: str) -> 'Boozmn':
                 boozmn.pmnc_b = ds["pmnc_b"].to_numpy().T
                 boozmn.gmns_b = ds["gmns_b"].to_numpy().T
         
-    else: # ASCII file-type "fname_boozmn"
+    else: # BINARY file-type "fname_boozmn"
 
         with scipy.io.FortranFile(fname_boozmn, 'r') as f:
             try:
@@ -1545,12 +1545,19 @@ def read_text(fname_wout: str, wout_txt: str) -> tuple[numpy.float64]:
             return (B0_p, Aminor_p, Rmajor_p, volume_p)
     
     else: # ASCII file-type "fname_wout" 
+        if not wout_txt:
+            raise ValueError(f"wout_txt must be specified for ASCII files: {fname_wout}")
+
         with (open(fname_wout, 'r')) as f:
             while f:
                 line = f.readline()
-    
+                if not line:
+                    break
                 if wout_txt in line:
                     break
+
+            if not line:
+                raise ValueError(f"Specified wout_txt '{wout_txt}' not found in {fname_wout}")
     
             if f:
                 parameters = []
@@ -1614,6 +1621,7 @@ def read_GKV_metric_file(fname_metric="./metric_boozer.bin.dat"):
         raise ValueError(f"Failed to determine endianness: {file_path}")
 
     endianness = detect_endianness(fname_metric)
+    print(f"Endianness check of {fname_metric}: {endianness}")
     dtype_i4 = numpy.dtype(f"{endianness}i4")  # 32bit int
     dtype_f8 = numpy.dtype(f"{endianness}f8")  # 64bit float
 

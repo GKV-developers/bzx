@@ -36,18 +36,19 @@ def test_gkv_metric_comparison(generate_test_data):
     test_data = read_GKV_metric_file(test_file)
 
     # Compare each element in the tuples
+    keys = ("nfp_b", "nss", "ntht", "nzeta", "mnboz_b", "mboz_b", "nboz_b", "Rax", "Bax", "aa", "volume_p", "asym_flg", "alpha_fix",
+            "rho", "theta", "zeta", "qq", "shat", "epst", "bb", "rootg_boz", "rootg_boz0", "ggup_boz",
+            "dbb_drho", "dbb_dtht", "dbb_dzeta",
+            "rr", "zz", "ph", "bbozc", "ixn_b", "ixm_b",
+            "bbozs")
     for i, (ref_val, test_val) in enumerate(zip(reference_data, test_data)):
         if isinstance(ref_val, np.ndarray):  # Compare array values
             if np.isnan(ref_val).any() or np.isinf(ref_val).any():
-                print(f"Warning: Reference data at index {i} contains NaN or Inf")
+                print(f"Warning: Reference data at index {i} ({keys[i]}) contains NaN or Inf")
             if np.isnan(test_val).any() or np.isinf(test_val).any():
-                print(f"Warning: Test data at index {i} contains NaN or Inf")
+                print(f"Warning: Test data at index {i} ({keys[i]}) contains NaN or Inf")
 
-            # Print debug info if NaN or Inf is found
-            if np.isnan(test_val).any() or np.isinf(test_val).any():
-                print(f"Test data at index {i} (NaN/Inf detected):\n{test_val}")
-
-            assert np.allclose(ref_val, test_val, atol=1e-8, equal_nan=True), f"Mismatch at index {i}: Arrays differ!"
+            assert np.allclose(ref_val, test_val, atol=1e-8, equal_nan=True), f"Mismatch at index {i} ({keys[i]}): Arrays differ!"
         else:  # Compare scalar values
-            assert ref_val == test_val, f"Mismatch at index {i}: {ref_val} != {test_val}"
+            assert ref_val == test_val, f"Mismatch at index {i} ({keys[i]}): {ref_val} != {test_val}"
 
