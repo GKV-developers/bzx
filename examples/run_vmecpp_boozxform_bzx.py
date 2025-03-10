@@ -43,16 +43,14 @@ nzeta = 0        # nzeta==0 for output GKV field-aligned coordinates
 alpha_fix = 0.0  # field-line label: alpha = zeta - q*theta NOT USED in 3d case (nzeta > 1)
 fname_wout="wout_lhd.nc"
 fname_boozmn="boozmn_lhd.nc"
-bzx(Ntheta_gkv, nrho, ntht, nzeta, alpha_fix, fname_boozmn, fname_wout, output_file="./metric_boozer.bin.dat")
+output_file="./metric_boozer.bin.dat"
+bzx(Ntheta_gkv, nrho, ntht, nzeta, alpha_fix, fname_boozmn=fname_boozmn, fname_wout=fname_wout, output_file=output_file)
+### When the "fname_wout" file is in ASCII format, "wout_txt" should be appropriately specified as written in "fname_wout", e.g.,
+### bzx(Ntheta_gkv, nrho, ntht, nzeta, alpha_fix, fname_boozmn=fname_boozmn, fname_wout=fname_wout, output_file=output_file, wout_txt="lhd")
 
 nzeta = 128      # Only for check. toroidal grid number in [0 <= zeta <= 2*pi]
-bzx(Ntheta_gkv, nrho, ntht, nzeta, alpha_fix, fname_boozmn="boozmn_lhd.nc", fname_wout="wout_lhd.nc", output_file="./metric_boozer_nzeta_finite.bin.dat")
-
-
-# In[ ]:
-
-
-
+output_file="./metric_boozer_nzeta_finite.bin.dat"
+bzx(Ntheta_gkv, nrho, ntht, nzeta, alpha_fix, fname_boozmn=fname_boozmn, fname_wout=fname_wout, output_file=output_file)
 
 
 # In[ ]:
