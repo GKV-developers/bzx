@@ -52,6 +52,7 @@ The script [`examples/run_vmecpp_boozxform_bzx.ipynb`](examples/run_vmecpp_boozx
     - About **BOOZ_XFORM** :
         - [BOOZ_XFORM Documentation](https://hiddensymmetries.github.io/booz_xform/)
         - [GitHub - BOOZ_XFORM](https://github.com/hiddenSymmetries/booz_xform)
+        - [BOOZ_XFORM - STELLOPT](https://princetonuniversity.github.io/STELLOPT/BOOZ_XFORM)
 - Step 3: Convert the **BOOZ_XFORM** output to GKV coordinates using **BZX**
     - This project.
 

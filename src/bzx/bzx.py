@@ -1583,6 +1583,95 @@ def print_text(B0_p: float, Aminor_p: float, Rmajor_p: float, volume_p: float,
     print(f'{B0_p} {Aminor_p} {Rmajor_p} {volume_p}', file=file)
 
 
+#%%% S. Mae 2025.3.10
+def read_GKV_metric_file(fname_metric="./metric_boozer.bin.dat"):
+
+    def detect_endianness(file_path):
+        with open(file_path, "rb") as f:
+            offset_header = 0
+            record_length = (4*7)+(8*4)+4+8
+            offset_footer = 4+record_length
+
+            # Test big endian
+            f.seek(offset_header)
+            header = numpy.fromfile(f,dtype='>i4',count=1)
+            f.seek(offset_footer)
+            footer = numpy.fromfile(f,dtype='>i4',count=1)
+            if not header.size:
+                raise ValueError(f"Empty file: {file_path}")
+            if header[0] == record_length and footer[0] == record_length:
+                return ">" # Big endian
+
+            # Test little endian
+            f.seek(offset_header)
+            header = numpy.fromfile(f,dtype='<i4',count=1)
+            f.seek(offset_footer)
+            footer = numpy.fromfile(f,dtype='<i4',count=1)
+            if not header.size:
+                raise ValueError("Empty file: {}".format(file_path))
+            if header[0] == record_length and footer[0] == record_length:
+                return "<" # Little endian
+        raise ValueError(f"Failed to determine endianness: {file_path}")
+
+    endianness = detect_endianness(fname_metric)
+    dtype_i4 = numpy.dtype(f"{endianness}i4")  # 32bit int
+    dtype_f8 = numpy.dtype(f"{endianness}f8")  # 64bit float
+
+    with open(fname_metric, 'rb') as f:
+        header = numpy.fromfile(f,dtype=dtype_i4,count=1)
+        nfp_b, nss, ntht, nzeta, mnboz_b, mboz_b, nboz_b = numpy.fromfile(f,dtype=dtype_i4,count=7)
+        Rax, Bax, aa, volume_p = numpy.fromfile(f,dtype=dtype_f8,count=4)
+        asym_flg = numpy.fromfile(f,dtype=dtype_i4,count=1)
+        alpha_fix = numpy.fromfile(f,dtype=dtype_f8,count=1)
+        footer = numpy.fromfile(f,dtype=dtype_i4,count=1)
+        if header != footer:
+            print("Error 1 for reading file_name:", fname_metric)
+
+        header = numpy.fromfile(f,dtype=dtype_i4,count=1)
+        rho = numpy.fromfile(f,dtype=dtype_f8,count=nss)
+        theta = numpy.fromfile(f,dtype=dtype_f8,count=ntht+1)
+        zeta = numpy.fromfile(f,dtype=dtype_f8,count=nzeta+1)
+        qq = numpy.fromfile(f,dtype=dtype_f8,count=nss)
+        shat = numpy.fromfile(f,dtype=dtype_f8,count=nss)
+        epst = numpy.fromfile(f,dtype=dtype_f8,count=nss)
+        bb = numpy.fromfile(f,dtype=dtype_f8,count=nss*(ntht+1)*(nzeta+1)).reshape((nzeta+1,ntht+1,nss)).T
+        rootg_boz = numpy.fromfile(f,dtype=dtype_f8,count=nss*(ntht+1)*(nzeta+1)).reshape((nzeta+1,ntht+1,nss)).T
+        rootg_boz0 = numpy.fromfile(f,dtype=dtype_f8,count=nss*(ntht+1)*(nzeta+1)).reshape((nzeta+1,ntht+1,nss)).T
+        ggup_boz = numpy.fromfile(f,dtype=dtype_f8,count=nss*(ntht+1)*(nzeta+1)*3*3).reshape((3,3,nzeta+1,ntht+1,nss)).T
+        dbb_drho = numpy.fromfile(f,dtype=dtype_f8,count=nss*(ntht+1)*(nzeta+1)).reshape((nzeta+1,ntht+1,nss)).T
+        dbb_dtht = numpy.fromfile(f,dtype=dtype_f8,count=nss*(ntht+1)*(nzeta+1)).reshape((nzeta+1,ntht+1,nss)).T
+        dbb_dzeta = numpy.fromfile(f,dtype=dtype_f8,count=nss*(ntht+1)*(nzeta+1)).reshape((nzeta+1,ntht+1,nss)).T
+        footer = numpy.fromfile(f,dtype=dtype_i4,count=1)
+        if header != footer:
+            print("Error 2 for reading file_name:", fname_metric)
+
+        header = numpy.fromfile(f,dtype=dtype_i4,count=1)
+        rr = numpy.fromfile(f,dtype=dtype_f8,count=nss*(ntht+1)*(nzeta+1)).reshape((nzeta+1,ntht+1,nss)).T
+        zz = numpy.fromfile(f,dtype=dtype_f8,count=nss*(ntht+1)*(nzeta+1)).reshape((nzeta+1,ntht+1,nss)).T
+        ph = numpy.fromfile(f,dtype=dtype_f8,count=nss*(ntht+1)*(nzeta+1)).reshape((nzeta+1,ntht+1,nss)).T
+        bbozc = numpy.fromfile(f,dtype=dtype_f8,count=mnboz_b*nss).reshape((nss,mnboz_b)).T
+        ixn_b = numpy.fromfile(f,dtype=dtype_i4,count=mnboz_b)
+        ixm_b = numpy.fromfile(f,dtype=dtype_i4,count=mnboz_b)
+        footer = numpy.fromfile(f,dtype=dtype_i4,count=1)
+        if header != footer:
+            print("Error 3 for reading file_name:", fname_metric)
+
+        if asym_flg == 1:
+            header = numpy.fromfile(f,dtype=dtype_i4,count=1)
+            bbozs = numpy.fromfile(f,dtype=dtype_f8,count=mnboz_b*nss).reshape((nss,mnboz_b)).T
+            footer = numpy.fromfile(f,dtype=dtype_i4,count=1)
+            if header != footer:
+                print("Error 4 for reading file_name:", fname_metric)
+        else:
+            bbozs = None
+
+    return (nfp_b, nss, ntht, nzeta, mnboz_b, mboz_b, nboz_b, Rax, Bax, aa, volume_p, asym_flg, alpha_fix,
+            rho, theta, zeta, qq, shat, epst, bb, rootg_boz, rootg_boz0, ggup_boz,
+            dbb_drho, dbb_dtht, dbb_dzeta,
+            rr, zz, ph, bbozc, ixn_b, ixm_b,
+            bbozs)
+#%%%
+
 #def main():
 #    file_log = './log_BZX.dat'
 #    file_prf = './geom/prof.dat'

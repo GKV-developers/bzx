@@ -7,14 +7,14 @@
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
-from plot_metric_utils import read_metric
+from bzx import read_GKV_metric_file
 
 fname_metric = "./metric_boozer_nzeta_finite.bin.dat"
 nfp_b, nss, ntht, nzeta, mnboz_b, mboz_b, nboz_b, Rax, Bax, aa, volume_p, asym_flg, alpha_fix, \
     rho, theta, zeta, qq, shat, epst, bb, rootg_boz, rootg_boz0, ggup_boz, \
     dbb_drho, dbb_dtht, dbb_dzeta, \
     rr, zz, ph, bbozc, ixn_b, ixm_b, \
-    bbozs = read_metric(fname_metric)
+    bbozs = read_GKV_metric_file(fname_metric)
 
 print(nfp_b,nss,ntht,nzeta,bb.shape,theta.max(),zeta.max())
 print("磁場強度 (B0):", Bax)
