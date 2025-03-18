@@ -293,6 +293,9 @@ class Metric:
             self.gbozs_nu = numpy.zeros((boozmn.mnboz_b, boozmn.ns_b))
 
         # --- copy array
+        #%%% S.Mae 2025.3.18
+        assert boozmn.jsize == boozmn.ns_b-1, f"jsize==ns_b is required. jsize:{boozmn.jsize}, ns_b:{boozmn.ns_b}"
+        #%%%
         self.bbozc_nu[:, 1:] = boozmn.bmnc_b  # Non-Uniform grid
         self.rbozc_nu[:, 1:] = boozmn.rmnc_b
         self.zbozs_nu[:, 1:] = boozmn.zmns_b
