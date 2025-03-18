@@ -21,7 +21,7 @@ from plot_boozmn_utils import read_boozmn_nc, read_wout_nc
 from plot_boozmn_utils import jmn2stz, jmn2stz_at_js, jmn2stz_at_zeta, jmn2stz_cartesian_grid, jmn2stz_cartesian_grid_at_js, jmn2stz_cartesian_grid_at_zeta
 from plot_boozmn_utils import jmn2sta, jmn2sta_cartesian_grid
 
-boozmn_ncfile = "boozmn_lhd.nc"
+boozmn_ncfile = "boozmn_solovev.nc"
 # help(read_boozmn_nc)
 boozmn_tuple = read_boozmn_nc(boozmn_ncfile, flag_debug=True)
 nfp_b, ns_b, aspect_b, rmax_b, rmin_b, betaxis_b, \
@@ -31,7 +31,7 @@ nfp_b, ns_b, aspect_b, rmax_b, rmin_b, betaxis_b, \
     bmnc_b, rmnc_b, zmns_b, pmns_b, gmnc_b, \
     bmns_b, rmns_b, zmnc_b, pmnc_b, gmns_b = boozmn_tuple
 
-wout_ncfile = ("wout_lhd.nc")
+wout_ncfile = ("wout_solovev.nc")
 B0_p, Aminor_p, Rmajor_p, volume_p = read_wout_nc(wout_ncfile)
 
 print("Magnetic field strength at magnetic axis (B0_p):", B0_p)
