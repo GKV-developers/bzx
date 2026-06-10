@@ -419,7 +419,8 @@ class Metric:
             self.rho[js] = js / numpy.abs(nrho - 1.0)       # Uniform rho grid
 
         for js in range(boozmn.ns_b):
-            self.qq_nu[js] = 1.0 / numpy.abs(boozmn.iota_b_nu[js])
+            # iota > 0 is ensured by the poloidal-angle flip in input_from_boozmn
+            self.qq_nu[js] = 1.0 / boozmn.iota_b_nu[js]
 
     def interpolation_to_uniform(self, nrho: int, boozmn: Boozmn):
         # --- interpolation to uniform rho-grids
@@ -1513,6 +1514,27 @@ def input_from_boozmn(fname_boozmn: str) -> 'Boozmn':
                 except:
                     raise RuntimeError('Read error8 !!')
     #%%%
+
+    #satake : flip poloidal angle direction if iota<0
+    jdg_i = 0
+    jdg_i_pos = 0
+
+    for js in range(boozmn.ns_b):
+        if (boozmn.iota_b_nu[js]<0.0):
+            jdg_i = 1
+        elif (boozmn.iota_b_nu[js]>0.0):
+            jdg_i_pos = 1
+
+    if (jdg_i == 1 and jdg_i_pos == 1):
+        raise ValueError(
+            'iota_b_nu changes sign across flux surfaces; '
+            'BZX assumes a globally consistent iota sign.')
+
+    if (jdg_i == 1):
+        print(' flip poloidal angle so that iota > 0')
+        boozmn.iota_b_nu = -boozmn.iota_b_nu
+        boozmn.buco_b_nu = -boozmn.buco_b_nu
+        boozmn.ixm_b     = -boozmn.ixm_b
 
     return boozmn
 
