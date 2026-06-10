@@ -95,19 +95,20 @@ def test_gkv_metric_comparison(generated_metric_file):
             assert ref_val == test_val, f"Mismatch at index {i} ({keys[i]}): {ref_val} != {test_val}"
 
 
-def test_q_profile_uses_half_mesh_iota(generated_metric_file):
+def test_q_profile_uses_half_mesh(generated_metric_file):
     data = read_GKV_metric_file(str(generated_metric_file))
     rho = data[13]
     qq = data[16]
 
     boozmn, metric = _extrapolated_boozmn_and_metric()
     rho_half = _rho_half_from_jlist(boozmn)
-    expected_iota, _ = _spline_all(
-        rho_half, np.abs(boozmn.iota_b_nu), rho, warn_out_of_bounds=False)
+    expected_qq, _ = _spline_all(
+        rho_half, 1.0 / np.abs(boozmn.iota_b_nu), rho,
+        warn_out_of_bounds=False)
 
     assert rho_half[0] == 0.0
     assert rho_half[-1] < 1.0
-    assert np.allclose(1.0 / qq, expected_iota, atol=1e-10, rtol=1e-10)
+    assert np.allclose(qq, expected_qq, atol=1e-10, rtol=1e-10)
 
 
 def test_fourier_coefficients_use_half_mesh(generated_metric_file):
@@ -134,8 +135,7 @@ def test_phi_interpolation_uses_full_mesh():
     expected_phi, expected_dphidrho = _spline_all(
         rho_full, boozmn.phi_b_nu, metric.rho)
 
-    assert metric.rho_full_nu[-1] == 1.0
-    assert metric.rho_half_nu[-1] < 1.0
-    assert np.allclose(metric.rho_full_nu, rho_full, atol=1e-15, rtol=1e-15)
+    assert rho_full[-1] == 1.0
+    assert np.allclose(metric.rho_nu, rho_full, atol=1e-15, rtol=1e-15)
     assert np.allclose(metric.phi_b, expected_phi, atol=1e-12, rtol=1e-12)
     assert np.allclose(metric.dphidrho, expected_dphidrho, atol=1e-12, rtol=1e-12)

@@ -197,15 +197,10 @@ class Metric:
         # rho theta_b zeta_b grids and q-profile
         self.rho: numpy.ndarray = None
         self.rho_nu: numpy.ndarray = None
-        self.rho_full_nu: numpy.ndarray = None
-        self.rho_half_nu: numpy.ndarray = None
         self.rho2: numpy.ndarray = None
-        self.iota_nu: numpy.ndarray = None
         self.qq_nu: numpy.ndarray = None
 
         # --- for interpolation
-        self.iota_bar: numpy.ndarray = None
-        self.diotadrho: numpy.ndarray = None
         self.qq: numpy.ndarray = None
         self.dqdrho: numpy.ndarray = None
         self.shat: numpy.ndarray = None
@@ -335,25 +330,25 @@ class Metric:
                 self.pbozs_nu[imn, 0] = 0.0
                 self.gbozc_nu[imn, 0] = 0.0
 
-        if boozmn.lasym_b:
-            for imn in range(boozmn.mnboz_b):
-                if boozmn.ixm_b[imn] == 0:
-                    self.bbozs_nu[imn, 0] = (1.5 * self.bbozs_nu[imn, 1] -
-                                             0.5 * self.bbozs_nu[imn, 2])
-                    self.rbozs_nu[imn, 0] = (1.5 * self.rbozs_nu[imn, 1] -
-                                             0.5 * self.rbozs_nu[imn, 2])
-                    self.zbozc_nu[imn, 0] = (1.5 * self.zbozc_nu[imn, 1] -
-                                             0.5 * self.zbozc_nu[imn, 2])
-                    self.pbozc_nu[imn, 0] = (1.5 * self.pbozc_nu[imn, 1] -
-                                             0.5 * self.pbozc_nu[imn, 2])
-                    self.gbozs_nu[imn, 0] = (1.5 * self.gbozs_nu[imn, 1] -
-                                             0.5 * self.gbozs_nu[imn, 2])
-                else:
-                    self.bbozs_nu[imn, 0] = 0.0
-                    self.rbozs_nu[imn, 0] = 0.0
-                    self.zbozc_nu[imn, 0] = 0.0
-                    self.pbozc_nu[imn, 0] = 0.0
-                    self.gbozs_nu[imn, 0] = 0.0
+            if boozmn.lasym_b:
+                for imn in range(boozmn.mnboz_b):
+                    if boozmn.ixm_b[imn] == 0:
+                        self.bbozs_nu[imn, 0] = (1.5 * self.bbozs_nu[imn, 1] -
+                                                 0.5 * self.bbozs_nu[imn, 2])
+                        self.rbozs_nu[imn, 0] = (1.5 * self.rbozs_nu[imn, 1] -
+                                                 0.5 * self.rbozs_nu[imn, 2])
+                        self.zbozc_nu[imn, 0] = (1.5 * self.zbozc_nu[imn, 1] -
+                                                 0.5 * self.zbozc_nu[imn, 2])
+                        self.pbozc_nu[imn, 0] = (1.5 * self.pbozc_nu[imn, 1] -
+                                                 0.5 * self.pbozc_nu[imn, 2])
+                        self.gbozs_nu[imn, 0] = (1.5 * self.gbozs_nu[imn, 1] -
+                                                 0.5 * self.gbozs_nu[imn, 2])
+                    else:
+                        self.bbozs_nu[imn, 0] = 0.0
+                        self.rbozs_nu[imn, 0] = 0.0
+                        self.zbozc_nu[imn, 0] = 0.0
+                        self.pbozc_nu[imn, 0] = 0.0
+                        self.gbozs_nu[imn, 0] = 0.0
 
         boozmn.phi_b_nu[0] = 0.0
         boozmn.iota_b_nu[0] = (1.5 * boozmn.iota_b_nu[1] -
@@ -389,30 +384,25 @@ class Metric:
     def q_profile(self, Ntheta_gkv: int, nrho: int, ntht: int, nzeta: int, boozmn: Boozmn):
         # --- rho & theta_b & zeta_b grids and q-profile
         self.rho = numpy.zeros(nrho)
-        self.rho_full_nu = numpy.zeros(boozmn.ns_b)
-        self.rho_half_nu = numpy.zeros(boozmn.ns_b)
-        self.rho_nu = self.rho_full_nu
+        self.rho_nu = numpy.zeros(boozmn.ns_b)
         self.rho2 = numpy.zeros(boozmn.ns_b)
-        self.iota_nu = numpy.zeros(boozmn.ns_b)
         self.qq_nu = numpy.zeros(boozmn.ns_b)
 
         self.theta = numpy.zeros(ntht + 1)
         self.zeta = numpy.zeros(nzeta + 1)
 
         for js in range(boozmn.ns_b):
-            self.rho_full_nu[js] = numpy.sqrt(
+            self.rho_nu[js] = numpy.sqrt(
                 boozmn.phi_b_nu[js] / boozmn.phi_b_nu[boozmn.ns_b - 1])   # Non-Uniform rho grid
             self.rho2[js] = boozmn.phi_b_nu[js] / \
                 boozmn.phi_b_nu[boozmn.ns_b - 1]
-        self.rho_half_nu[1:] = numpy.sqrt(
-            (boozmn.jlist.astype(float) - 1.5) / (boozmn.ns_b - 1.0))
 
-        print("rho_full_nu[0], rho_half_nu[1], iota_bar[0], iota_bar[1], = ")
-        print(self.rho_full_nu[0], self.rho_half_nu[1],
+        print("rho_nu[0], rho_nu[1], iota_bar[0], iota_bar[1], = ")
+        print(self.rho_nu[0], self.rho_nu[1],
               boozmn.iota_b_nu[0], boozmn.iota_b_nu[1])
-        print("rho_full_nu[0], rho_half_nu[1], iota_bar[0], iota_bar[1], = ",
+        print("rho_nu[0], rho_nu[1], iota_bar[0], iota_bar[1], = ",
               file=self.olog)
-        print(self.rho_full_nu[0], self.rho_half_nu[1],
+        print(self.rho_nu[0], self.rho_nu[1],
               boozmn.iota_b_nu[0], boozmn.iota_b_nu[1],
               file=self.olog)
 
@@ -429,13 +419,10 @@ class Metric:
             self.rho[js] = js / numpy.abs(nrho - 1.0)       # Uniform rho grid
 
         for js in range(boozmn.ns_b):
-            self.iota_nu[js] = numpy.abs(boozmn.iota_b_nu[js])
             self.qq_nu[js] = 1.0 / numpy.abs(boozmn.iota_b_nu[js])
 
     def interpolation_to_uniform(self, nrho: int, boozmn: Boozmn):
         # --- interpolation to uniform rho-grids
-        self.iota_bar = numpy.zeros(nrho)
-        self.diotadrho = numpy.zeros(nrho)
         self.qq = numpy.zeros(nrho)
         self.dqdrho = numpy.zeros(nrho)
         self.shat = numpy.zeros(nrho)
@@ -473,86 +460,87 @@ class Metric:
 
         spline_full = Spline(boozmn.ns_b)
         spline_half = Spline(boozmn.ns_b, warn_out_of_bounds=False)
+        rho_half_nu = numpy.zeros(boozmn.ns_b)
+        rho_half_nu[1:] = numpy.sqrt(
+            (boozmn.jlist.astype(float) - 1.5) / (boozmn.ns_b - 1.0))
 
-        spline_half.cubic_spline_pre(self.rho_half_nu, self.iota_nu, boozmn.ns_b)
-        spline_half.cubic_spline_all(nrho, self.rho, self.iota_bar, self.diotadrho)
-        self.qq = 1.0 / self.iota_bar
-        self.dqdrho = -self.diotadrho / self.iota_bar ** 2
+        spline_half.cubic_spline_pre(rho_half_nu, self.qq_nu, boozmn.ns_b)
+        spline_half.cubic_spline_all(nrho, self.rho, self.qq, self.dqdrho)
 
         self.shat = self.dqdrho * self.rho / self.qq
         self.epst = self.rho * self.aa / self.Rax
 
         # --- cug: B_zeta  (covariant zeta comp. of B, or toroidal current func.)
-        spline_half.cubic_spline_pre(self.rho_half_nu, boozmn.bvco_b_nu, boozmn.ns_b)
+        spline_half.cubic_spline_pre(rho_half_nu, boozmn.bvco_b_nu, boozmn.ns_b)
         spline_half.cubic_spline_all(nrho, self.rho, self.cug, self.dummy1)
 
         # --- cui: B_theta (covariant theta comp. of B, or poloidal current func.)
-        spline_half.cubic_spline_pre(self.rho_half_nu, boozmn.buco_b_nu, boozmn.ns_b)
+        spline_half.cubic_spline_pre(rho_half_nu, boozmn.buco_b_nu, boozmn.ns_b)
         spline_half.cubic_spline_all(nrho, self.rho, self.cui, self.dummy1)
 
-        spline_full.cubic_spline_pre(self.rho_full_nu, boozmn.phi_b_nu, boozmn.ns_b)
+        spline_full.cubic_spline_pre(self.rho_nu, boozmn.phi_b_nu, boozmn.ns_b)
         spline_full.cubic_spline_all(nrho, self.rho, self.phi_b, self.dphidrho)
 
         for imn in range(boozmn.mnboz_b):
             spline_half.cubic_spline_pre(
-                self.rho_half_nu, self.bbozc_nu[imn, :], boozmn.ns_b)
+                rho_half_nu, self.bbozc_nu[imn, :], boozmn.ns_b)
             spline_half.cubic_spline_all(
                 nrho, self.rho, self.bbozc[imn, :], self.dbbozc[imn, :])
 
         for imn in range(boozmn.mnboz_b):
             spline_half.cubic_spline_pre(
-                self.rho_half_nu, self.rbozc_nu[imn, :], boozmn.ns_b)
+                rho_half_nu, self.rbozc_nu[imn, :], boozmn.ns_b)
             spline_half.cubic_spline_all(
                 nrho, self.rho, self.rbozc[imn, :], self.drbozc[imn, :])
 
         for imn in range(boozmn.mnboz_b):
             spline_half.cubic_spline_pre(
-                self.rho_half_nu, self.zbozs_nu[imn, :], boozmn.ns_b)
+                rho_half_nu, self.zbozs_nu[imn, :], boozmn.ns_b)
             spline_half.cubic_spline_all(
                 nrho, self.rho, self.zbozs[imn, :], self.dzbozs[imn, :])
 
         for imn in range(boozmn.mnboz_b):
             spline_half.cubic_spline_pre(
-                self.rho_half_nu, self.pbozs_nu[imn, :], boozmn.ns_b)
+                rho_half_nu, self.pbozs_nu[imn, :], boozmn.ns_b)
             spline_half.cubic_spline_all(
                 nrho, self.rho, self.pbozs[imn, :], self.dpbozs[imn, :])
 
         # --- gbozc: rootg_boz/dphidrho
         for imn in range(boozmn.mnboz_b):
             spline_half.cubic_spline_pre(
-                self.rho_half_nu, self.gbozc_nu[imn, :], boozmn.ns_b)
+                rho_half_nu, self.gbozc_nu[imn, :], boozmn.ns_b)
             spline_half.cubic_spline_all(
                 nrho, self.rho, self.gbozc[imn, :], self.dummy2[imn, :])
 
         if boozmn.lasym_b:
             for imn in range(boozmn.mnboz_b):
                 spline_half.cubic_spline_pre(
-                    self.rho_half_nu, self.bbozs_nu[imn, :], boozmn.ns_b)
+                    rho_half_nu, self.bbozs_nu[imn, :], boozmn.ns_b)
                 spline_half.cubic_spline_all(
                     nrho, self.rho, self.bbozs[imn, :], self.dbbozs[imn, :])
 
             for imn in range(boozmn.mnboz_b):
                 spline_half.cubic_spline_pre(
-                    self.rho_half_nu, self.rbozs_nu[imn, :], boozmn.ns_b)
+                    rho_half_nu, self.rbozs_nu[imn, :], boozmn.ns_b)
                 spline_half.cubic_spline_all(
                     nrho, self.rho, self.rbozs[imn, :], self.drbozs[imn, :])
 
             for imn in range(boozmn.mnboz_b):
                 spline_half.cubic_spline_pre(
-                    self.rho_half_nu, self.zbozc_nu[imn, :], boozmn.ns_b)
+                    rho_half_nu, self.zbozc_nu[imn, :], boozmn.ns_b)
                 spline_half.cubic_spline_all(
                     nrho, self.rho, self.zbozc[imn, :], self.dzbozc[imn, :])
 
             for imn in range(boozmn.mnboz_b):
                 spline_half.cubic_spline_pre(
-                    self.rho_half_nu, self.pbozc_nu[imn, :], boozmn.ns_b)
+                    rho_half_nu, self.pbozc_nu[imn, :], boozmn.ns_b)
                 spline_half.cubic_spline_all(
                     nrho, self.rho, self.pbozc[imn, :], self.dpbozc[imn, :])
 
             # --- gbozc: rootg_boz/dphidrho
             for imn in range(boozmn.mnboz_b):
                 spline_half.cubic_spline_pre(
-                    self.rho_half_nu, self.gbozs_nu[imn, :], boozmn.ns_b)
+                    rho_half_nu, self.gbozs_nu[imn, :], boozmn.ns_b)
                 spline_half.cubic_spline_all(
                     nrho, self.rho, self.gbozs[imn, :], self.dummy2[imn, :])
 
