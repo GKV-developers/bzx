@@ -330,25 +330,25 @@ class Metric:
                 self.pbozs_nu[imn, 0] = 0.0
                 self.gbozc_nu[imn, 0] = 0.0
 
-            if boozmn.lasym_b:
-                for imn in range(boozmn.mnboz_b):
-                    if boozmn.ixm_b[imn] == 0:
-                        self.bbozs_nu[imn, 0] = (1.5 * self.bbozs_nu[imn, 1] -
-                                                 0.5 * self.bbozs_nu[imn, 2])
-                        self.rbozs_nu[imn, 0] = (1.5 * self.rbozs_nu[imn, 1] -
-                                                 0.5 * self.rbozs_nu[imn, 2])
-                        self.zbozc_nu[imn, 0] = (1.5 * self.zbozc_nu[imn, 1] -
-                                                 0.5 * self.zbozc_nu[imn, 2])
-                        self.pbozc_nu[imn, 0] = (1.5 * self.pbozc_nu[imn, 1] -
-                                                 0.5 * self.pbozc_nu[imn, 2])
-                        self.gbozs_nu[imn, 0] = (1.5 * self.gbozs_nu[imn, 1] -
-                                                 0.5 * self.gbozs_nu[imn, 2])
-                    else:
-                        self.bbozs_nu[imn, 0] = 0.0
-                        self.rbozs_nu[imn, 0] = 0.0
-                        self.zbozc_nu[imn, 0] = 0.0
-                        self.pbozc_nu[imn, 0] = 0.0
-                        self.gbozs_nu[imn, 0] = 0.0
+        if boozmn.lasym_b:
+            for imn in range(boozmn.mnboz_b):
+                if boozmn.ixm_b[imn] == 0:
+                    self.bbozs_nu[imn, 0] = (1.5 * self.bbozs_nu[imn, 1] -
+                                             0.5 * self.bbozs_nu[imn, 2])
+                    self.rbozs_nu[imn, 0] = (1.5 * self.rbozs_nu[imn, 1] -
+                                             0.5 * self.rbozs_nu[imn, 2])
+                    self.zbozc_nu[imn, 0] = (1.5 * self.zbozc_nu[imn, 1] -
+                                             0.5 * self.zbozc_nu[imn, 2])
+                    self.pbozc_nu[imn, 0] = (1.5 * self.pbozc_nu[imn, 1] -
+                                             0.5 * self.pbozc_nu[imn, 2])
+                    self.gbozs_nu[imn, 0] = (1.5 * self.gbozs_nu[imn, 1] -
+                                             0.5 * self.gbozs_nu[imn, 2])
+                else:
+                    self.bbozs_nu[imn, 0] = 0.0
+                    self.rbozs_nu[imn, 0] = 0.0
+                    self.zbozc_nu[imn, 0] = 0.0
+                    self.pbozc_nu[imn, 0] = 0.0
+                    self.gbozs_nu[imn, 0] = 0.0
 
         boozmn.phi_b_nu[0] = 0.0
         boozmn.iota_b_nu[0] = (1.5 * boozmn.iota_b_nu[1] -
@@ -397,10 +397,10 @@ class Metric:
             self.rho2[js] = boozmn.phi_b_nu[js] / \
                 boozmn.phi_b_nu[boozmn.ns_b - 1]
 
-        print("rho_nu[0], rho_nu[1], iota_bar[0], iota_bar[1], = ")
+        print("rho_nu[0], rho_nu[1], iota_b_nu[0], iota_b_nu[1], = ")
         print(self.rho_nu[0], self.rho_nu[1],
               boozmn.iota_b_nu[0], boozmn.iota_b_nu[1])
-        print("rho_nu[0], rho_nu[1], iota_bar[0], iota_bar[1], = ",
+        print("rho_nu[0], rho_nu[1], iota_b_nu[0], iota_b_nu[1], = ",
               file=self.olog)
         print(self.rho_nu[0], self.rho_nu[1],
               boozmn.iota_b_nu[0], boozmn.iota_b_nu[1],
