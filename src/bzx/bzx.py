@@ -1517,10 +1517,18 @@ def input_from_boozmn(fname_boozmn: str) -> 'Boozmn':
 
     #satake : flip poloidal angle direction if iota<0
     jdg_i = 0
+    jdg_i_pos = 0
 
     for js in range(boozmn.ns_b):
         if (boozmn.iota_b_nu[js]<0.0):
             jdg_i = 1
+        elif (boozmn.iota_b_nu[js]>0.0):
+            jdg_i_pos = 1
+
+    if (jdg_i == 1 and jdg_i_pos == 1):
+        raise ValueError(
+            'iota_b_nu changes sign across flux surfaces; '
+            'BZX assumes a globally consistent iota sign.')
 
     if (jdg_i == 1):
         print(' flip poloidal angle so that iota > 0')

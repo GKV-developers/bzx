@@ -148,6 +148,21 @@ def test_negative_iota_flips_poloidal_angle(tmp_path):
     assert np.array_equal(boozmn.ixn_b, boozmn_ref.ixn_b)
 
 
+def test_mixed_sign_iota_is_rejected(tmp_path):
+    import xarray as xr
+
+    mixed_file = tmp_path / "boozmn_mixed_sign_iota.nc"
+    with xr.load_dataset(str(BOOZMN_FILE)) as ds:
+        iota = ds["iota_b"].copy()
+        iota_values = iota.to_numpy()
+        iota_values[1] = -abs(iota_values[1])
+        ds["iota_b"] = (iota.dims, iota_values)
+        ds.to_netcdf(str(mixed_file))
+
+    with pytest.raises(ValueError, match="changes sign"):
+        input_from_boozmn(str(mixed_file))
+
+
 def test_phi_interpolation_uses_full_mesh():
     boozmn, metric = _extrapolated_boozmn_and_metric()
     metric.q_profile(NTHETA_GKV, NRHO, NTHT, NZETA, boozmn)
