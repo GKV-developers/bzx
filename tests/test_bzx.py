@@ -103,7 +103,7 @@ def test_q_profile_uses_half_mesh(generated_metric_file):
     boozmn, metric = _extrapolated_boozmn_and_metric()
     rho_half = _rho_half_from_jlist(boozmn)
     expected_qq, _ = _spline_all(
-        rho_half, 1.0 / np.abs(boozmn.iota_b_nu), rho,
+        rho_half, 1.0 / boozmn.iota_b_nu, rho,
         warn_out_of_bounds=False)
 
     assert rho_half[0] == 0.0
@@ -124,6 +124,28 @@ def test_fourier_coefficients_use_half_mesh(generated_metric_file):
         expected_bbozc, _ = _spline_all(
             rho_half, metric.bbozc_nu[imn, :], rho, warn_out_of_bounds=False)
         assert np.allclose(bbozc[imn, :], expected_bbozc, atol=1e-10, rtol=1e-10)
+
+
+def test_negative_iota_flips_poloidal_angle(tmp_path):
+    """An iota<0 equilibrium is converted to iota>0 by flipping the
+    poloidal angle direction (iota, buco, ixm sign flip), so that the
+    direction of increasing poloidal angle aligns with the field."""
+    import xarray as xr
+
+    flipped_file = tmp_path / "boozmn_negative_iota.nc"
+    with xr.load_dataset(str(BOOZMN_FILE)) as ds:
+        ds["iota_b"] = -ds["iota_b"]
+        ds["buco_b"] = -ds["buco_b"]
+        ds.to_netcdf(str(flipped_file))
+
+    boozmn_ref = input_from_boozmn(str(BOOZMN_FILE))
+    boozmn = input_from_boozmn(str(flipped_file))
+
+    assert np.all(boozmn.iota_b_nu[1:] > 0.0)
+    assert np.allclose(boozmn.iota_b_nu, boozmn_ref.iota_b_nu)
+    assert np.allclose(boozmn.buco_b_nu, boozmn_ref.buco_b_nu)
+    assert np.array_equal(boozmn.ixm_b, -boozmn_ref.ixm_b)
+    assert np.array_equal(boozmn.ixn_b, boozmn_ref.ixn_b)
 
 
 def test_phi_interpolation_uses_full_mesh():
