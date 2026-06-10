@@ -1,0 +1,15 @@
+# Local caches and build outputs
+__pycache__/
+.pytest_cache/
+build/
+src/bzx.egg-info/
+.ipynb_checkpoints/
+.vscode/
+
+# Generated BZX outputs
+log_BZX.dat
+examples/*.nc
+examples/*.dat
+examples/diff.txt
+tests/log_BZX.dat
+tests/metric_boozer.bin.dat
