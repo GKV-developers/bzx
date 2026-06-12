@@ -153,6 +153,10 @@ class Boozmn:
         self.bvco_b_nu: numpy.ndarray = None
         self.buco_b_nu: numpy.ndarray = None
 
+        # half-mesh toroidal flux with both edges added (size nsb1 = ns_b + 1)
+        self.phi_hf_nu: numpy.ndarray = None
+        self.nsb1: int = 0
+
         self.mboz_b: int = 0
         self.nboz_b: int = 0
         self.mnboz_b: int = 0
@@ -245,6 +249,7 @@ class Metric:
         self.Bax: float = 0.0
         self.Rax: float = 0.0
         self.aa: float = 0.0
+        self.phi_edge: float = 0.0
 
         # --- B(rho,theta_b,zeta_b), R(rho,theta_b,zeta_b), Z(rho,theta_b,zeta_b), phi(rho,theta_b,zeta_b)
         self.bb: numpy.ndarray = None
@@ -279,83 +284,61 @@ class Metric:
         self.olog = olog
 
     def extrapolation_to_magnetic(self, boozmn: Boozmn):
-        # --- extrapolation to the magnetic axis
-        self.bbozc_nu = numpy.zeros((boozmn.mnboz_b, boozmn.ns_b))
-        self.rbozc_nu = numpy.zeros((boozmn.mnboz_b, boozmn.ns_b))
-        self.zbozs_nu = numpy.zeros((boozmn.mnboz_b, boozmn.ns_b))
-        self.pbozs_nu = numpy.zeros((boozmn.mnboz_b, boozmn.ns_b))
-        self.gbozc_nu = numpy.zeros((boozmn.mnboz_b, boozmn.ns_b))
+        # --- extrapolation to the magnetic axis and the LCFS
+        # The boozmn file provides ns_b-1 half-mesh points; explicit edge
+        # values at the axis (phi=0) and the LCFS (phi=phi_edge) are added,
+        # so the radial arrays hold nsb1 = ns_b + 1 points.
+        boozmn.nsb1 = boozmn.ns_b + 1
+        self.bbozc_nu = numpy.zeros((boozmn.mnboz_b, boozmn.nsb1))
+        self.rbozc_nu = numpy.zeros((boozmn.mnboz_b, boozmn.nsb1))
+        self.zbozs_nu = numpy.zeros((boozmn.mnboz_b, boozmn.nsb1))
+        self.pbozs_nu = numpy.zeros((boozmn.mnboz_b, boozmn.nsb1))
+        self.gbozc_nu = numpy.zeros((boozmn.mnboz_b, boozmn.nsb1))
 
         if boozmn.lasym_b:
-            self.bbozs_nu = numpy.zeros((boozmn.mnboz_b, boozmn.ns_b))
-            self.rbozs_nu = numpy.zeros((boozmn.mnboz_b, boozmn.ns_b))
-            self.zbozc_nu = numpy.zeros((boozmn.mnboz_b, boozmn.ns_b))
-            self.pbozc_nu = numpy.zeros((boozmn.mnboz_b, boozmn.ns_b))
-            self.gbozs_nu = numpy.zeros((boozmn.mnboz_b, boozmn.ns_b))
+            self.bbozs_nu = numpy.zeros((boozmn.mnboz_b, boozmn.nsb1))
+            self.rbozs_nu = numpy.zeros((boozmn.mnboz_b, boozmn.nsb1))
+            self.zbozc_nu = numpy.zeros((boozmn.mnboz_b, boozmn.nsb1))
+            self.pbozc_nu = numpy.zeros((boozmn.mnboz_b, boozmn.nsb1))
+            self.gbozs_nu = numpy.zeros((boozmn.mnboz_b, boozmn.nsb1))
 
         # --- copy array
         #%%% S.Mae 2025.3.18
-        assert boozmn.jsize == boozmn.ns_b-1, f"jsize==ns_b is required. jsize:{boozmn.jsize}, ns_b:{boozmn.ns_b}"
+        assert boozmn.jsize == boozmn.ns_b-1, f"jsize==ns_b-1 is required. jsize:{boozmn.jsize}, ns_b:{boozmn.ns_b}"
         #%%%
-        self.bbozc_nu[:, 1:] = boozmn.bmnc_b  # Non-Uniform grid
-        self.rbozc_nu[:, 1:] = boozmn.rmnc_b
-        self.zbozs_nu[:, 1:] = boozmn.zmns_b
-        self.pbozs_nu[:, 1:] = boozmn.pmns_b
-        self.gbozc_nu[:, 1:] = boozmn.gmnc_b
+        self.bbozc_nu[:, 1:boozmn.ns_b] = boozmn.bmnc_b  # Non-Uniform grid
+        self.rbozc_nu[:, 1:boozmn.ns_b] = boozmn.rmnc_b
+        self.zbozs_nu[:, 1:boozmn.ns_b] = boozmn.zmns_b
+        self.pbozs_nu[:, 1:boozmn.ns_b] = boozmn.pmns_b
+        self.gbozc_nu[:, 1:boozmn.ns_b] = boozmn.gmnc_b
 
         if boozmn.lasym_b:
-            self.bbozs_nu[:, 1:] = boozmn.bmns_b
-            self.rbozs_nu[:, 1:] = boozmn.rmns_b
-            self.zbozc_nu[:, 1:] = boozmn.zmnc_b
-            self.pbozc_nu[:, 1:] = boozmn.pmnc_b
-            self.gbozs_nu[:, 1:] = boozmn.gmns_b
+            self.bbozs_nu[:, 1:boozmn.ns_b] = boozmn.bmns_b
+            self.rbozs_nu[:, 1:boozmn.ns_b] = boozmn.rmns_b
+            self.zbozc_nu[:, 1:boozmn.ns_b] = boozmn.zmnc_b
+            self.pbozc_nu[:, 1:boozmn.ns_b] = boozmn.pmnc_b
+            self.gbozs_nu[:, 1:boozmn.ns_b] = boozmn.gmns_b
 
-        # extrapolation from the first two half-mesh points to the magnetic axis
-        for imn in range(boozmn.mnboz_b):
-            if boozmn.ixm_b[imn] == 0:
-                self.bbozc_nu[imn, 0] = (1.5 * self.bbozc_nu[imn, 1] -
-                                         0.5 * self.bbozc_nu[imn, 2])
-                self.rbozc_nu[imn, 0] = (1.5 * self.rbozc_nu[imn, 1] -
-                                         0.5 * self.rbozc_nu[imn, 2])
-                self.zbozs_nu[imn, 0] = (1.5 * self.zbozs_nu[imn, 1] -
-                                         0.5 * self.zbozs_nu[imn, 2])
-                self.pbozs_nu[imn, 0] = (1.5 * self.pbozs_nu[imn, 1] -
-                                         0.5 * self.pbozs_nu[imn, 2])
-                self.gbozc_nu[imn, 0] = (1.5 * self.gbozc_nu[imn, 1] -
-                                         0.5 * self.gbozc_nu[imn, 2])
-            else:
-                self.bbozc_nu[imn, 0] = 0.0
-                self.rbozc_nu[imn, 0] = 0.0
-                self.zbozs_nu[imn, 0] = 0.0
-                self.pbozs_nu[imn, 0] = 0.0
-                self.gbozc_nu[imn, 0] = 0.0
-
+        # linear extrapolation from the first/last two half-mesh points to
+        # the magnetic axis (m=0 modes only; m!=0 modes vanish on axis)
+        # and to the LCFS (all modes)
+        fourier_arrays = [self.bbozc_nu, self.rbozc_nu, self.zbozs_nu,
+                          self.pbozs_nu, self.gbozc_nu]
         if boozmn.lasym_b:
-            for imn in range(boozmn.mnboz_b):
-                if boozmn.ixm_b[imn] == 0:
-                    self.bbozs_nu[imn, 0] = (1.5 * self.bbozs_nu[imn, 1] -
-                                             0.5 * self.bbozs_nu[imn, 2])
-                    self.rbozs_nu[imn, 0] = (1.5 * self.rbozs_nu[imn, 1] -
-                                             0.5 * self.rbozs_nu[imn, 2])
-                    self.zbozc_nu[imn, 0] = (1.5 * self.zbozc_nu[imn, 1] -
-                                             0.5 * self.zbozc_nu[imn, 2])
-                    self.pbozc_nu[imn, 0] = (1.5 * self.pbozc_nu[imn, 1] -
-                                             0.5 * self.pbozc_nu[imn, 2])
-                    self.gbozs_nu[imn, 0] = (1.5 * self.gbozs_nu[imn, 1] -
-                                             0.5 * self.gbozs_nu[imn, 2])
-                else:
-                    self.bbozs_nu[imn, 0] = 0.0
-                    self.rbozs_nu[imn, 0] = 0.0
-                    self.zbozc_nu[imn, 0] = 0.0
-                    self.pbozc_nu[imn, 0] = 0.0
-                    self.gbozs_nu[imn, 0] = 0.0
+            fourier_arrays += [self.bbozs_nu, self.rbozs_nu, self.zbozc_nu,
+                               self.pbozc_nu, self.gbozs_nu]
+        m0 = (boozmn.ixm_b == 0)
+        for arr in fourier_arrays:
+            arr[m0, 0] = 1.5 * arr[m0, 1] - 0.5 * arr[m0, 2]
+            arr[:, -1] = 1.5 * arr[:, -2] - 0.5 * arr[:, -3]
 
         boozmn.phi_b_nu[0] = 0.0
         boozmn.iota_b_nu[0] = (1.5 * boozmn.iota_b_nu[1] -
                                0.5 * boozmn.iota_b_nu[2])
-        boozmn.bvco_b_nu[0] = 0.0
-        boozmn.buco_b_nu[0] = (1.5 * boozmn.buco_b_nu[1] -
-                               0.5 * boozmn.buco_b_nu[2])
+        # on axis, bvco (=cug) is finite while buco (=cui) vanishes
+        boozmn.bvco_b_nu[0] = (1.5 * boozmn.bvco_b_nu[1] -
+                               0.5 * boozmn.bvco_b_nu[2])
+        boozmn.buco_b_nu[0] = 0.0
         boozmn.pres_b_nu[0] = (1.5 * boozmn.pres_b_nu[1] -
                                0.5 * boozmn.pres_b_nu[2])
         boozmn.beta_b_nu[0] = (1.5 * boozmn.beta_b_nu[1] -
@@ -365,37 +348,56 @@ class Metric:
         boozmn.phi_b_nu /= (2.0 * numpy.pi)
         boozmn.phip_b_nu /= (2.0 * numpy.pi)
 
+        # extrapolation of the 1D profiles to the LCFS (size ns_b -> nsb1);
+        # phi_b_nu stays full-mesh and needs no extension
+        for name in ("iota_b_nu", "bvco_b_nu", "buco_b_nu",
+                     "phip_b_nu", "pres_b_nu", "beta_b_nu"):
+            arr = getattr(boozmn, name)
+            setattr(boozmn, name,
+                    numpy.append(arr, 1.5 * arr[-1] - 0.5 * arr[-2]))
+        # fail safe: force non-negative pressure and beta at the LCFS
+        boozmn.pres_b_nu[-1] = max(0.0, boozmn.pres_b_nu[-1])
+        boozmn.beta_b_nu[-1] = max(0.0, boozmn.beta_b_nu[-1])
+
+        # half-mesh toroidal flux (jlist-based) with both edges added;
+        # only the edge value of phi_b_nu enters here
+        boozmn.phi_hf_nu = numpy.zeros(boozmn.nsb1)
+        boozmn.phi_hf_nu[1:boozmn.ns_b] = (
+            boozmn.jlist.astype(float) - 1.5) / float(boozmn.ns_b - 1)
+        boozmn.phi_hf_nu[boozmn.ns_b] = 1.0
+        boozmn.phi_hf_nu *= boozmn.phi_b_nu[boozmn.ns_b - 1]
+
     def normalization(self, boozmn: Boozmn, B0_p: float, Rmajor_p: float):
         # --- normalization for vmec calculation and (Bax, Rax, a) for GKV
         # rescale factor --> cnorm*bbozc (not used ordinary)
-        cnorm = Rmajor_p * B0_p / numpy.abs(boozmn.bvco_b_nu[boozmn.ns_b - 1])
+        cnorm = Rmajor_p * B0_p / numpy.abs(boozmn.bvco_b_nu[-1])
         print(f'cnorm: {cnorm}')
 
         self.Bax = self.bbozc_nu[0, 0]
         self.Rax = self.rbozc_nu[0, 0]
-        self.aa = numpy.sqrt(
-            2.0 * abs(boozmn.phi_b_nu[boozmn.ns_b - 1]) / self.Bax)
+        # toroidal flux at the LCFS divided by 2*pi [Wb/rad]; kept as an
+        # attribute for post-run analysis
+        self.phi_edge = boozmn.phi_b_nu[boozmn.ns_b - 1]
+        self.aa = numpy.sqrt(2.0 * abs(self.phi_edge) / self.Bax)
         print("Bax, Rax, a (for GKV), Phi_edge = ", self.Bax,
-              self.Rax, self.aa, boozmn.phi_b_nu[boozmn.ns_b - 1])
+              self.Rax, self.aa, self.phi_edge)
         print("Bax, Rax, a (for GKV), Phi_edge = ", self.Bax,
-              self.Rax, self.aa, boozmn.phi_b_nu[boozmn.ns_b - 1],
+              self.Rax, self.aa, self.phi_edge,
               file=self.olog)
 
     def q_profile(self, Ntheta_gkv: int, nrho: int, ntht: int, nzeta: int, boozmn: Boozmn):
         # --- rho & theta_b & zeta_b grids and q-profile
         self.rho = numpy.zeros(nrho)
-        self.rho_nu = numpy.zeros(boozmn.ns_b)
-        self.rho2 = numpy.zeros(boozmn.ns_b)
-        self.qq_nu = numpy.zeros(boozmn.ns_b)
+        self.rho_nu = numpy.zeros(boozmn.nsb1)
+        self.rho2 = numpy.zeros(boozmn.nsb1)
+        self.qq_nu = numpy.zeros(boozmn.nsb1)
 
         self.theta = numpy.zeros(ntht + 1)
         self.zeta = numpy.zeros(nzeta + 1)
 
-        for js in range(boozmn.ns_b):
-            self.rho_nu[js] = numpy.sqrt(
-                boozmn.phi_b_nu[js] / boozmn.phi_b_nu[boozmn.ns_b - 1])   # Non-Uniform rho grid
-            self.rho2[js] = boozmn.phi_b_nu[js] / \
-                boozmn.phi_b_nu[boozmn.ns_b - 1]
+        # Non-Uniform rho grid on the half-mesh + both-edge points
+        self.rho2[:] = boozmn.phi_hf_nu / boozmn.phi_hf_nu[-1]
+        self.rho_nu[:] = numpy.sqrt(self.rho2)
 
         print("rho_nu[0], rho_nu[1], iota_b_nu[0], iota_b_nu[1], = ")
         print(self.rho_nu[0], self.rho_nu[1],
@@ -418,9 +420,8 @@ class Metric:
         for js in range(nrho):
             self.rho[js] = js / numpy.abs(nrho - 1.0)       # Uniform rho grid
 
-        for js in range(boozmn.ns_b):
-            # iota > 0 is ensured by the poloidal-angle flip in input_from_boozmn
-            self.qq_nu[js] = 1.0 / boozmn.iota_b_nu[js]
+        # iota > 0 is ensured by the poloidal-angle flip in input_from_boozmn
+        self.qq_nu[:] = 1.0 / boozmn.iota_b_nu
 
     def interpolation_to_uniform(self, nrho: int, boozmn: Boozmn):
         # --- interpolation to uniform rho-grids
@@ -459,91 +460,50 @@ class Metric:
             self.dzbozc = numpy.zeros((boozmn.mnboz_b, nrho))
             self.dpbozc = numpy.zeros((boozmn.mnboz_b, nrho))
 
-        spline_full = Spline(boozmn.ns_b)
-        spline_half = Spline(boozmn.ns_b, warn_out_of_bounds=False)
-        rho_half_nu = numpy.zeros(boozmn.ns_b)
-        rho_half_nu[1:] = numpy.sqrt(
-            (boozmn.jlist.astype(float) - 1.5) / (boozmn.ns_b - 1.0))
+        # All radial profiles are given on the half-mesh + both-edge grid
+        # rho_nu (nsb1 points), so a single spline covers [0, 1] without
+        # out-of-range extrapolation.
+        spline = Spline(boozmn.nsb1)
 
-        spline_half.cubic_spline_pre(rho_half_nu, self.qq_nu, boozmn.ns_b)
-        spline_half.cubic_spline_all(nrho, self.rho, self.qq, self.dqdrho)
+        spline.cubic_spline_pre(self.rho_nu, self.qq_nu, boozmn.nsb1)
+        spline.cubic_spline_all(nrho, self.rho, self.qq, self.dqdrho)
 
         self.shat = self.dqdrho * self.rho / self.qq
         self.epst = self.rho * self.aa / self.Rax
 
         # --- cug: B_zeta  (covariant zeta comp. of B, or toroidal current func.)
-        spline_half.cubic_spline_pre(rho_half_nu, boozmn.bvco_b_nu, boozmn.ns_b)
-        spline_half.cubic_spline_all(nrho, self.rho, self.cug, self.dummy1)
+        spline.cubic_spline_pre(self.rho_nu, boozmn.bvco_b_nu, boozmn.nsb1)
+        spline.cubic_spline_all(nrho, self.rho, self.cug, self.dummy1)
 
         # --- cui: B_theta (covariant theta comp. of B, or poloidal current func.)
-        spline_half.cubic_spline_pre(rho_half_nu, boozmn.buco_b_nu, boozmn.ns_b)
-        spline_half.cubic_spline_all(nrho, self.rho, self.cui, self.dummy1)
+        spline.cubic_spline_pre(self.rho_nu, boozmn.buco_b_nu, boozmn.nsb1)
+        spline.cubic_spline_all(nrho, self.rho, self.cui, self.dummy1)
 
-        spline_full.cubic_spline_pre(self.rho_nu, boozmn.phi_b_nu, boozmn.ns_b)
-        spline_full.cubic_spline_all(nrho, self.rho, self.phi_b, self.dphidrho)
+        spline.cubic_spline_pre(self.rho_nu, boozmn.phi_hf_nu, boozmn.nsb1)
+        spline.cubic_spline_all(nrho, self.rho, self.phi_b, self.dphidrho)
 
-        for imn in range(boozmn.mnboz_b):
-            spline_half.cubic_spline_pre(
-                rho_half_nu, self.bbozc_nu[imn, :], boozmn.ns_b)
-            spline_half.cubic_spline_all(
-                nrho, self.rho, self.bbozc[imn, :], self.dbbozc[imn, :])
-
-        for imn in range(boozmn.mnboz_b):
-            spline_half.cubic_spline_pre(
-                rho_half_nu, self.rbozc_nu[imn, :], boozmn.ns_b)
-            spline_half.cubic_spline_all(
-                nrho, self.rho, self.rbozc[imn, :], self.drbozc[imn, :])
-
-        for imn in range(boozmn.mnboz_b):
-            spline_half.cubic_spline_pre(
-                rho_half_nu, self.zbozs_nu[imn, :], boozmn.ns_b)
-            spline_half.cubic_spline_all(
-                nrho, self.rho, self.zbozs[imn, :], self.dzbozs[imn, :])
-
-        for imn in range(boozmn.mnboz_b):
-            spline_half.cubic_spline_pre(
-                rho_half_nu, self.pbozs_nu[imn, :], boozmn.ns_b)
-            spline_half.cubic_spline_all(
-                nrho, self.rho, self.pbozs[imn, :], self.dpbozs[imn, :])
-
-        # --- gbozc: rootg_boz/dphidrho
-        for imn in range(boozmn.mnboz_b):
-            spline_half.cubic_spline_pre(
-                rho_half_nu, self.gbozc_nu[imn, :], boozmn.ns_b)
-            spline_half.cubic_spline_all(
-                nrho, self.rho, self.gbozc[imn, :], self.dummy2[imn, :])
-
+        # gbozc: rootg_boz/dphidrho
+        targets = [
+            (self.bbozc_nu, self.bbozc, self.dbbozc),
+            (self.rbozc_nu, self.rbozc, self.drbozc),
+            (self.zbozs_nu, self.zbozs, self.dzbozs),
+            (self.pbozs_nu, self.pbozs, self.dpbozs),
+            (self.gbozc_nu, self.gbozc, self.dummy2),
+        ]
         if boozmn.lasym_b:
+            targets += [
+                (self.bbozs_nu, self.bbozs, self.dbbozs),
+                (self.rbozs_nu, self.rbozs, self.drbozs),
+                (self.zbozc_nu, self.zbozc, self.dzbozc),
+                (self.pbozc_nu, self.pbozc, self.dpbozc),
+                (self.gbozs_nu, self.gbozs, self.dummy2),
+            ]
+        for src, dst, ddst in targets:
             for imn in range(boozmn.mnboz_b):
-                spline_half.cubic_spline_pre(
-                    rho_half_nu, self.bbozs_nu[imn, :], boozmn.ns_b)
-                spline_half.cubic_spline_all(
-                    nrho, self.rho, self.bbozs[imn, :], self.dbbozs[imn, :])
-
-            for imn in range(boozmn.mnboz_b):
-                spline_half.cubic_spline_pre(
-                    rho_half_nu, self.rbozs_nu[imn, :], boozmn.ns_b)
-                spline_half.cubic_spline_all(
-                    nrho, self.rho, self.rbozs[imn, :], self.drbozs[imn, :])
-
-            for imn in range(boozmn.mnboz_b):
-                spline_half.cubic_spline_pre(
-                    rho_half_nu, self.zbozc_nu[imn, :], boozmn.ns_b)
-                spline_half.cubic_spline_all(
-                    nrho, self.rho, self.zbozc[imn, :], self.dzbozc[imn, :])
-
-            for imn in range(boozmn.mnboz_b):
-                spline_half.cubic_spline_pre(
-                    rho_half_nu, self.pbozc_nu[imn, :], boozmn.ns_b)
-                spline_half.cubic_spline_all(
-                    nrho, self.rho, self.pbozc[imn, :], self.dpbozc[imn, :])
-
-            # --- gbozc: rootg_boz/dphidrho
-            for imn in range(boozmn.mnboz_b):
-                spline_half.cubic_spline_pre(
-                    rho_half_nu, self.gbozs_nu[imn, :], boozmn.ns_b)
-                spline_half.cubic_spline_all(
-                    nrho, self.rho, self.gbozs[imn, :], self.dummy2[imn, :])
+                spline.cubic_spline_pre(
+                    self.rho_nu, src[imn, :], boozmn.nsb1)
+                spline.cubic_spline_all(
+                    nrho, self.rho, dst[imn, :], ddst[imn, :])
 
     def B_R_Z_Phi(self, nrho: int, ntht: int, nzeta: int, alpha_fix: float, boozmn: Boozmn):
         self.bb = numpy.zeros((nrho, ntht + 1, nzeta + 1))
@@ -804,40 +764,53 @@ class Metric:
                             self.dph_dzeta[js, it, iz] ** 2)
 
                         # Squared Jacobian
-                        self.ggsq_boz[js, it, iz] = (self.ggdn_boz[js, it, iz, 0, 0] * self.ggdn_boz[js, it, iz, 1, 1] * self.ggdn_boz[js, it, iz, 2, 2] +
-                                                     self.ggdn_boz[js, it, iz, 0, 1] * self.ggdn_boz[js, it, iz, 1, 2] * self.ggdn_boz[js, it, iz, 2, 0] +
-                                                     self.ggdn_boz[js, it, iz, 0, 2] * self.ggdn_boz[js, it, iz, 1, 0] * self.ggdn_boz[js, it, iz, 2, 1] -
-                                                     self.ggdn_boz[js, it, iz, 0, 2] * self.ggdn_boz[js, it, iz, 1, 1] * self.ggdn_boz[js, it, iz, 2, 0] -
-                                                     self.ggdn_boz[js, it, iz, 0, 1] * self.ggdn_boz[js, it, iz, 1, 0] * self.ggdn_boz[js, it, iz, 2, 2] -
-                                                     self.ggdn_boz[js, it, iz, 0, 0] * self.ggdn_boz[js, it, iz, 1, 2] * self.ggdn_boz[js, it, iz, 2, 1])
+                        ggsq = (self.ggdn_boz[js, it, iz, 0, 0] * self.ggdn_boz[js, it, iz, 1, 1] * self.ggdn_boz[js, it, iz, 2, 2] +
+                                self.ggdn_boz[js, it, iz, 0, 1] * self.ggdn_boz[js, it, iz, 1, 2] * self.ggdn_boz[js, it, iz, 2, 0] +
+                                self.ggdn_boz[js, it, iz, 0, 2] * self.ggdn_boz[js, it, iz, 1, 0] * self.ggdn_boz[js, it, iz, 2, 1] -
+                                self.ggdn_boz[js, it, iz, 0, 2] * self.ggdn_boz[js, it, iz, 1, 1] * self.ggdn_boz[js, it, iz, 2, 0] -
+                                self.ggdn_boz[js, it, iz, 0, 1] * self.ggdn_boz[js, it, iz, 1, 0] * self.ggdn_boz[js, it, iz, 2, 2] -
+                                self.ggdn_boz[js, it, iz, 0, 0] * self.ggdn_boz[js, it, iz, 1, 2] * self.ggdn_boz[js, it, iz, 2, 1])
+                        self.ggsq_boz[js, it, iz] = ggsq
 
                         # Jacobian: rootg = sqrt(g)
-                        self.rootg_boz[js, it, iz] = numpy.sqrt(
-                            self.ggsq_boz[js, it, iz])
+                        # ggsq vanishes on the magnetic axis (rho=0) and may be a
+                        # tiny negative value there by round-off; clamp before
+                        # sqrt to avoid NaN
+                        if numpy.isfinite(ggsq):
+                            self.rootg_boz[js, it, iz] = numpy.sqrt(
+                                max(ggsq, 0.0))
+                        else:
+                            self.rootg_boz[js, it, iz] = 0.0
                         self.rootg_boz0[js, it, iz] = self.dphidrho[js] * (
                             self.cug[js] + self.cui[js] / self.qq[js]) / self.bb[js, it, iz] ** 2
                         self.rootg_boz1[js, it, iz] = (
                             self.dphidrho[js] * self.ggb[js, it, iz])
 
+                        # skip the contravariant metric where ggsq ~ 0 (on axis)
+                        # to avoid NaN/Inf from zero division
+                        if (not numpy.isfinite(ggsq)) or abs(ggsq) < 1.0e-300:
+                            self.ggup_boz[js, it, iz, :, :] = 0.0
+                            continue
+
                         # Contra-variant metric tensor
                         self.ggup_boz[js, it, iz, 0, 0] = (self.ggdn_boz[js, it, iz, 1, 1] * self.ggdn_boz[js, it, iz, 2, 2] -
-                                                           self.ggdn_boz[js, it, iz, 1, 2] * self.ggdn_boz[js, it, iz, 2, 1]) / self.ggsq_boz[js, it, iz]
+                                                           self.ggdn_boz[js, it, iz, 1, 2] * self.ggdn_boz[js, it, iz, 2, 1]) / ggsq
                         self.ggup_boz[js, it, iz, 0, 1] = (self.ggdn_boz[js, it, iz, 0, 2] * self.ggdn_boz[js, it, iz, 2, 1] -
-                                                           self.ggdn_boz[js, it, iz, 0, 1] * self.ggdn_boz[js, it, iz, 2, 2]) / self.ggsq_boz[js, it, iz]
+                                                           self.ggdn_boz[js, it, iz, 0, 1] * self.ggdn_boz[js, it, iz, 2, 2]) / ggsq
                         self.ggup_boz[js, it, iz, 0, 2] = (self.ggdn_boz[js, it, iz, 0, 1] * self.ggdn_boz[js, it, iz, 1, 2] -
-                                                           self.ggdn_boz[js, it, iz, 0, 2] * self.ggdn_boz[js, it, iz, 1, 1]) / self.ggsq_boz[js, it, iz]
+                                                           self.ggdn_boz[js, it, iz, 0, 2] * self.ggdn_boz[js, it, iz, 1, 1]) / ggsq
                         self.ggup_boz[js, it, iz, 1, 0] = (
                             self.ggup_boz[js, it, iz, 0, 1])
                         self.ggup_boz[js, it, iz, 1, 1] = (self.ggdn_boz[js, it, iz, 0, 0] * self.ggdn_boz[js, it, iz, 2, 2] -
-                                                           self.ggdn_boz[js, it, iz, 0, 2] * self.ggdn_boz[js, it, iz, 2, 0]) / self.ggsq_boz[js, it, iz]
+                                                           self.ggdn_boz[js, it, iz, 0, 2] * self.ggdn_boz[js, it, iz, 2, 0]) / ggsq
                         self.ggup_boz[js, it, iz, 1, 2] = (self.ggdn_boz[js, it, iz, 0, 2] * self.ggdn_boz[js, it, iz, 1, 0] -
-                                                           self.ggdn_boz[js, it, iz, 0, 0] * self.ggdn_boz[js, it, iz, 1, 2]) / self.ggsq_boz[js, it, iz]
+                                                           self.ggdn_boz[js, it, iz, 0, 0] * self.ggdn_boz[js, it, iz, 1, 2]) / ggsq
                         self.ggup_boz[js, it, iz, 2, 0] = (
                             self.ggup_boz[js, it, iz, 0, 2])
                         self.ggup_boz[js, it, iz, 2, 1] = (
                             self.ggup_boz[js, it, iz, 1, 2])
                         self.ggup_boz[js, it, iz, 2, 2] = (self.ggdn_boz[js, it, iz, 0, 0] * self.ggdn_boz[js, it, iz, 1, 1] -
-                                                           self.ggdn_boz[js, it, iz, 0, 1] * self.ggdn_boz[js, it, iz, 1, 0]) / self.ggsq_boz[js, it, iz]
+                                                           self.ggdn_boz[js, it, iz, 0, 1] * self.ggdn_boz[js, it, iz, 1, 0]) / ggsq
                     except ZeroDivisionError as e:
                         print(e)
 
@@ -1229,9 +1202,9 @@ class Metric:
             if fortran_format:
                 template = "{:5}" + ("{:>24}" * 10) + '\n'
 
-                for js in range(boozmn.ns_b):
+                for js in range(boozmn.nsb1):
                     s = numpy.sqrt(
-                        boozmn.phi_b_nu[js] / boozmn.phi_b_nu[boozmn.ns_b - 1])
+                        boozmn.phi_hf_nu[js] / boozmn.phi_hf_nu[boozmn.nsb1 - 1])
 
                     odbg.write(
                         template.format(
@@ -1242,14 +1215,14 @@ class Metric:
                             fd(boozmn.pres_b_nu[js]),
                             fd(boozmn.beta_b_nu[js]),
                             fd(boozmn.phip_b_nu[js]),
-                            fd(boozmn.phi_b_nu[js]),
+                            fd(boozmn.phi_hf_nu[js]),
                             fd(boozmn.bvco_b_nu[js]),
                             fd(boozmn.buco_b_nu[js]),
                             fd(s)))
             else:
-                index = numpy.arange(1, boozmn.ns_b + 1)
+                index = numpy.arange(1, boozmn.nsb1 + 1)
                 s = numpy.sqrt(
-                    boozmn.phi_b_nu / boozmn.phi_b_nu[boozmn.ns_b - 1])
+                    boozmn.phi_hf_nu / boozmn.phi_hf_nu[boozmn.nsb1 - 1])
                 fmt = '%5d' + ('%24.15E' * 10)
 
                 numpy.savetxt(odbg, numpy.c_[
@@ -1260,7 +1233,7 @@ class Metric:
                               boozmn.pres_b_nu,
                               boozmn.beta_b_nu,
                               boozmn.phip_b_nu,
-                              boozmn.phi_b_nu,
+                              boozmn.phi_hf_nu,
                               boozmn.bvco_b_nu,
                               boozmn.buco_b_nu,
                               s],
@@ -1537,6 +1510,46 @@ def input_from_boozmn(fname_boozmn: str) -> 'Boozmn':
         boozmn.ixm_b     = -boozmn.ixm_b
 
     return boozmn
+
+
+def fill_missing_phi_b_from_wout(boozmn: 'Boozmn', fname_wout: str,
+                                 olog: typing.TextIO = None):
+    """Fallback for boozmn files whose phi_b is all zero or invalid
+    (observed with some booz_xform versions, e.g. 0.0.9).
+
+    Only the edge value of phi_b matters downstream (Phi_edge and
+    a = sqrt(2|Phi_edge|/Bax)); the radial distribution is rebuilt as the
+    uniform-in-s full mesh, which is exact for VMEC equilibria.
+    Returns the raw wout phi edge value when the fallback fires,
+    otherwise None.
+    """
+    if (numpy.all(numpy.isfinite(boozmn.phi_b_nu)) and
+            boozmn.phi_b_nu[boozmn.ns_b - 1] != 0.0):
+        return None
+
+    if fname_wout[-3:] != ".nc":
+        raise ValueError(
+            'boozmn phi_b is zero/invalid and the ASCII wout file has no '
+            'phi profile; provide a NetCDF wout file to recover Phi_edge.')
+
+    with xr.load_dataset(fname_wout) as ds:
+        if "phi" not in ds:
+            raise ValueError(
+                f'{fname_wout} has no phi variable; cannot recover Phi_edge.')
+        phi_edge = float(ds["phi"].to_numpy()[-1])
+
+    if (not numpy.isfinite(phi_edge)) or phi_edge == 0.0:
+        raise ValueError(
+            f'wout phi edge value is invalid: {phi_edge}')
+
+    msg = ('WARNING: boozmn phi_b is zero/invalid; '
+           f'Phi_edge is taken from wout:phi[-1] = {phi_edge}')
+    print(msg)
+    if olog is not None:
+        print(msg, file=olog)
+
+    boozmn.phi_b_nu = numpy.linspace(0.0, phi_edge, boozmn.ns_b)
+    return phi_edge
 
 
 def print_boozmn(
@@ -1830,6 +1843,7 @@ def bzx(Ntheta_gkv: int, nrho: int, ntht: int, nzeta: int, alpha_fix: float = 0.
             
             ##
             metric = Metric(f)
+            fill_missing_phi_b_from_wout(boozmn, fname_wout, olog=f)
             metric.extrapolation_to_magnetic(boozmn)
             metric.normalization(boozmn, B0_p, Rmajor_p)
             metric.q_profile(Ntheta_gkv, nrho, ntht, nzeta, boozmn)

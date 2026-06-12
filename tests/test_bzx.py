@@ -7,7 +7,8 @@ import os
 import io
 from pathlib import Path
 from bzx import bzx, read_GKV_metric_file
-from bzx.bzx import Metric, Spline, input_from_boozmn, read_text
+from bzx.bzx import (Metric, Spline, fill_missing_phi_b_from_wout,
+                     input_from_boozmn, read_text)
 
 TEST_DIR = Path(__file__).resolve().parent
 REFERENCE_DIR = TEST_DIR / "reference_data"
@@ -31,15 +32,13 @@ def _spline_all(xp, yp, x, *, warn_out_of_bounds=True):
     return y, dydx
 
 
-def _rho_half_from_jlist(boozmn):
-    rho_half = np.zeros(boozmn.ns_b)
-    rho_half[1:] = np.sqrt(
+def _rho_hf_from_jlist(boozmn):
+    """jlist-based half-mesh rho grid with both edges (nsb1 points)."""
+    rho_hf = np.zeros(boozmn.ns_b + 1)
+    rho_hf[1:boozmn.ns_b] = np.sqrt(
         (boozmn.jlist.astype(float) - 1.5) / (boozmn.ns_b - 1.0))
-    return rho_half
-
-
-def _rho_full_from_phi(boozmn):
-    return np.sqrt(boozmn.phi_b_nu / boozmn.phi_b_nu[-1])
+    rho_hf[boozmn.ns_b] = 1.0
+    return rho_hf
 
 
 def _extrapolated_boozmn_and_metric():
@@ -101,13 +100,12 @@ def test_q_profile_uses_half_mesh(generated_metric_file):
     qq = data[16]
 
     boozmn, metric = _extrapolated_boozmn_and_metric()
-    rho_half = _rho_half_from_jlist(boozmn)
-    expected_qq, _ = _spline_all(
-        rho_half, 1.0 / boozmn.iota_b_nu, rho,
-        warn_out_of_bounds=False)
+    rho_hf = _rho_hf_from_jlist(boozmn)
+    expected_qq, _ = _spline_all(rho_hf, 1.0 / boozmn.iota_b_nu, rho)
 
-    assert rho_half[0] == 0.0
-    assert rho_half[-1] < 1.0
+    assert rho_hf[0] == 0.0
+    assert rho_hf[-1] == 1.0
+    assert len(rho_hf) == boozmn.ns_b + 1
     assert np.allclose(qq, expected_qq, atol=1e-10, rtol=1e-10)
 
 
@@ -117,13 +115,43 @@ def test_fourier_coefficients_use_half_mesh(generated_metric_file):
     bbozc = data[29]
 
     boozmn, metric = _extrapolated_boozmn_and_metric()
-    rho_half = _rho_half_from_jlist(boozmn)
+    rho_hf = _rho_hf_from_jlist(boozmn)
     mode_indices = [0, int(np.flatnonzero(boozmn.ixm_b != 0)[0])]
 
     for imn in mode_indices:
         expected_bbozc, _ = _spline_all(
-            rho_half, metric.bbozc_nu[imn, :], rho, warn_out_of_bounds=False)
+            rho_hf, metric.bbozc_nu[imn, :], rho)
         assert np.allclose(bbozc[imn, :], expected_bbozc, atol=1e-10, rtol=1e-10)
+
+
+def test_fourier_coefficients_extrapolated_to_both_edges():
+    boozmn, metric = _extrapolated_boozmn_and_metric()
+
+    assert metric.bbozc_nu.shape == (boozmn.mnboz_b, boozmn.ns_b + 1)
+    # axis: m=0 modes are linearly extrapolated, m!=0 modes vanish
+    m0 = (boozmn.ixm_b == 0)
+    assert np.allclose(metric.bbozc_nu[m0, 0],
+                       1.5 * metric.bbozc_nu[m0, 1] -
+                       0.5 * metric.bbozc_nu[m0, 2])
+    assert np.all(metric.bbozc_nu[~m0, 0] == 0.0)
+    # LCFS: all modes are linearly extrapolated
+    assert np.allclose(metric.bbozc_nu[:, -1],
+                       1.5 * metric.bbozc_nu[:, -2] -
+                       0.5 * metric.bbozc_nu[:, -3])
+
+
+def test_axis_values_of_current_profiles():
+    boozmn, metric = _extrapolated_boozmn_and_metric()
+
+    # on axis, bvco (=cug) is finite while buco (=cui) vanishes
+    assert boozmn.buco_b_nu[0] == 0.0
+    assert np.isclose(boozmn.bvco_b_nu[0],
+                      1.5 * boozmn.bvco_b_nu[1] - 0.5 * boozmn.bvco_b_nu[2])
+    assert boozmn.bvco_b_nu[0] != 0.0
+    # 1D profiles are extended to the LCFS (nsb1 points)
+    assert boozmn.iota_b_nu.size == boozmn.ns_b + 1
+    assert boozmn.bvco_b_nu.size == boozmn.ns_b + 1
+    assert boozmn.buco_b_nu.size == boozmn.ns_b + 1
 
 
 def test_negative_iota_flips_poloidal_angle(tmp_path):
@@ -163,16 +191,89 @@ def test_mixed_sign_iota_is_rejected(tmp_path):
         input_from_boozmn(str(mixed_file))
 
 
-def test_phi_interpolation_uses_full_mesh():
+def test_phi_interpolation_uses_half_mesh_grid():
     boozmn, metric = _extrapolated_boozmn_and_metric()
     metric.q_profile(NTHETA_GKV, NRHO, NTHT, NZETA, boozmn)
     metric.interpolation_to_uniform(NRHO, boozmn)
 
-    rho_full = _rho_full_from_phi(boozmn)
+    rho_hf = _rho_hf_from_jlist(boozmn)
     expected_phi, expected_dphidrho = _spline_all(
-        rho_full, boozmn.phi_b_nu, metric.rho)
+        rho_hf, boozmn.phi_hf_nu, metric.rho)
 
-    assert rho_full[-1] == 1.0
-    assert np.allclose(metric.rho_nu, rho_full, atol=1e-15, rtol=1e-15)
+    assert boozmn.phi_hf_nu[0] == 0.0
+    assert np.isclose(boozmn.phi_hf_nu[-1],
+                      boozmn.phi_b_nu[boozmn.ns_b - 1])
+    assert np.allclose(metric.rho_nu, rho_hf, atol=1e-15, rtol=1e-15)
     assert np.allclose(metric.phi_b, expected_phi, atol=1e-12, rtol=1e-12)
     assert np.allclose(metric.dphidrho, expected_dphidrho, atol=1e-12, rtol=1e-12)
+
+
+def test_phi_b_fallback_noop_for_valid_boozmn():
+    boozmn = input_from_boozmn(str(BOOZMN_FILE))
+    phi_b_before = boozmn.phi_b_nu.copy()
+
+    result = fill_missing_phi_b_from_wout(boozmn, str(WOUT_FILE))
+
+    assert result is None
+    assert np.array_equal(boozmn.phi_b_nu, phi_b_before)
+
+
+def test_phi_b_fallback_fills_linspace(tmp_path):
+    import xarray as xr
+
+    zero_phi_file = tmp_path / "boozmn_zero_phi.nc"
+    with xr.load_dataset(str(BOOZMN_FILE)) as ds:
+        ds["phi_b"] = (ds["phi_b"].dims, np.zeros_like(ds["phi_b"].to_numpy()))
+        ds.to_netcdf(str(zero_phi_file))
+
+    boozmn = input_from_boozmn(str(zero_phi_file))
+    result = fill_missing_phi_b_from_wout(boozmn, str(WOUT_FILE))
+
+    with xr.load_dataset(str(WOUT_FILE)) as wds:
+        phi_edge = float(wds["phi"].to_numpy()[-1])
+
+    assert result == phi_edge
+    assert np.allclose(boozmn.phi_b_nu,
+                       np.linspace(0.0, phi_edge, boozmn.ns_b))
+
+
+def test_phi_b_fallback_rejects_ascii_wout(tmp_path):
+    import xarray as xr
+
+    zero_phi_file = tmp_path / "boozmn_zero_phi.nc"
+    with xr.load_dataset(str(BOOZMN_FILE)) as ds:
+        ds["phi_b"] = (ds["phi_b"].dims, np.zeros_like(ds["phi_b"].to_numpy()))
+        ds.to_netcdf(str(zero_phi_file))
+
+    boozmn = input_from_boozmn(str(zero_phi_file))
+    with pytest.raises(ValueError, match="NetCDF wout"):
+        fill_missing_phi_b_from_wout(boozmn, "wout.txt")
+
+
+def test_phi_b_fallback_metric_matches_reference(tmp_path):
+    """A zero-phi_b boozmn must yield the same metric (incl. the
+    analysis-facing aa) as the healthy boozmn, since wout phi is
+    uniform in s and only Phi_edge enters the metric."""
+    import xarray as xr
+
+    zero_phi_file = tmp_path / "boozmn_zero_phi.nc"
+    with xr.load_dataset(str(BOOZMN_FILE)) as ds:
+        ds["phi_b"] = (ds["phi_b"].dims, np.zeros_like(ds["phi_b"].to_numpy()))
+        ds.to_netcdf(str(zero_phi_file))
+
+    output_file = tmp_path / "metric_boozer.bin.dat"
+    cwd = os.getcwd()
+    os.chdir(tmp_path)
+    try:
+        bzx(NTHETA_GKV, NRHO, NTHT, NZETA, ALPHA_FIX,
+            str(zero_phi_file), str(WOUT_FILE), str(output_file))
+    finally:
+        os.chdir(cwd)
+
+    reference_data = read_GKV_metric_file(str(REFERENCE_METRIC_FILE))
+    test_data = read_GKV_metric_file(str(output_file))
+    for ref_val, test_val in zip(reference_data, test_data):
+        if isinstance(ref_val, np.ndarray):
+            assert np.allclose(ref_val, test_val, atol=1e-8)
+        else:
+            assert ref_val == test_val

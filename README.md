@@ -38,6 +38,7 @@ bzx(Ntheta_gkv, nrho, ntht, nzeta, alpha_fix,
 ```
 - Reads **VMEC output file (`wout.nc`)** and **BOOZ_XFORM output file (`boozmn.nc`)**. NetCDF format is recommended, but Binary format is also acceptable.
 - Converts them into field-aligned data and saves the result as **GKV input binary file (`metric_boozer.bin.dat`)**.
+- Note: some **BOOZ_XFORM** versions (e.g. the Python package `booz_xform==0.0.9`) write `phi_b = 0` into `boozmn.nc`. **BZX** detects this automatically and recovers the edge toroidal flux from the `phi` variable of `wout.nc` (a NetCDF `wout` is required in this case), printing a warning to stdout and `log_BZX.dat`.
 
 
 #### **(ii) Example of workflow: From VMEC to GKV via BOOZ_XFORM and BZX**
