@@ -285,9 +285,10 @@ class Metric:
 
     def extrapolation_to_magnetic(self, boozmn: Boozmn):
         # --- extrapolation to the magnetic axis and the LCFS
-        # The boozmn file provides ns_b-1 half-mesh points; explicit edge
-        # values at the axis (phi=0) and the LCFS (phi=phi_edge) are added,
-        # so the radial arrays hold nsb1 = ns_b + 1 points.
+        # satake amend 2026.6 : the boozmn file provides ns_b-1 half-mesh
+        # points; explicit edge values at the axis (phi=0) and the LCFS
+        # (phi=phi_edge) are added, so the radial arrays hold
+        # nsb1 = ns_b + 1 points.
         boozmn.nsb1 = boozmn.ns_b + 1
         self.bbozc_nu = numpy.zeros((boozmn.mnboz_b, boozmn.nsb1))
         self.rbozc_nu = numpy.zeros((boozmn.mnboz_b, boozmn.nsb1))
@@ -322,6 +323,7 @@ class Metric:
         # linear extrapolation from the first/last two half-mesh points to
         # the magnetic axis (m=0 modes only; m!=0 modes vanish on axis)
         # and to the LCFS (all modes)
+        # satake added 2026.6 : extrapolation to the LCFS side
         fourier_arrays = [self.bbozc_nu, self.rbozc_nu, self.zbozs_nu,
                           self.pbozs_nu, self.gbozc_nu]
         if boozmn.lasym_b:
@@ -335,7 +337,8 @@ class Metric:
         boozmn.phi_b_nu[0] = 0.0
         boozmn.iota_b_nu[0] = (1.5 * boozmn.iota_b_nu[1] -
                                0.5 * boozmn.iota_b_nu[2])
-        # on axis, bvco (=cug) is finite while buco (=cui) vanishes
+        # satake bug fix 2026.6 : on axis, bvco (=cug) can be finite
+        # but buco (=cui) is zero
         boozmn.bvco_b_nu[0] = (1.5 * boozmn.bvco_b_nu[1] -
                                0.5 * boozmn.bvco_b_nu[2])
         boozmn.buco_b_nu[0] = 0.0
@@ -348,8 +351,9 @@ class Metric:
         boozmn.phi_b_nu /= (2.0 * numpy.pi)
         boozmn.phip_b_nu /= (2.0 * numpy.pi)
 
-        # extrapolation of the 1D profiles to the LCFS (size ns_b -> nsb1);
-        # phi_b_nu stays full-mesh and needs no extension
+        # satake added 2026.6 : extrapolation of the 1D profiles to the
+        # LCFS (size ns_b -> nsb1); phi_b_nu stays full-mesh and needs
+        # no extension
         for name in ("iota_b_nu", "bvco_b_nu", "buco_b_nu",
                      "phip_b_nu", "pres_b_nu", "beta_b_nu"):
             arr = getattr(boozmn, name)
@@ -359,8 +363,10 @@ class Metric:
         boozmn.pres_b_nu[-1] = max(0.0, boozmn.pres_b_nu[-1])
         boozmn.beta_b_nu[-1] = max(0.0, boozmn.beta_b_nu[-1])
 
-        # half-mesh toroidal flux (jlist-based) with both edges added;
-        # only the edge value of phi_b_nu enters here
+        # satake 2026.6 : define half-mesh toroidal flux grid with both
+        # edges added (size nsb1). Defined here via jlist so that it is
+        # explicitly consistent with the radial indices of the input file;
+        # only the edge value of phi_b_nu enters.
         boozmn.phi_hf_nu = numpy.zeros(boozmn.nsb1)
         boozmn.phi_hf_nu[1:boozmn.ns_b] = (
             boozmn.jlist.astype(float) - 1.5) / float(boozmn.ns_b - 1)
@@ -370,6 +376,7 @@ class Metric:
     def normalization(self, boozmn: Boozmn, B0_p: float, Rmajor_p: float):
         # --- normalization for vmec calculation and (Bax, Rax, a) for GKV
         # rescale factor --> cnorm*bbozc (not used ordinary)
+        # satake 2026.6 : reference the LCFS-extrapolated value
         cnorm = Rmajor_p * B0_p / numpy.abs(boozmn.bvco_b_nu[-1])
         print(f'cnorm: {cnorm}')
 
@@ -395,7 +402,8 @@ class Metric:
         self.theta = numpy.zeros(ntht + 1)
         self.zeta = numpy.zeros(nzeta + 1)
 
-        # Non-Uniform rho grid on the half-mesh + both-edge points
+        # satake modif. 2026.6 : Non-Uniform rho grid on the same
+        # half-mesh + both-edge points as phi_hf_nu
         self.rho2[:] = boozmn.phi_hf_nu / boozmn.phi_hf_nu[-1]
         self.rho_nu[:] = numpy.sqrt(self.rho2)
 
@@ -460,9 +468,9 @@ class Metric:
             self.dzbozc = numpy.zeros((boozmn.mnboz_b, nrho))
             self.dpbozc = numpy.zeros((boozmn.mnboz_b, nrho))
 
-        # All radial profiles are given on the half-mesh + both-edge grid
-        # rho_nu (nsb1 points), so a single spline covers [0, 1] without
-        # out-of-range extrapolation.
+        # satake modif. 2026.6 : all radial profiles are given on the
+        # half-mesh + both-edge grid rho_nu (nsb1 points), so a single
+        # spline covers [0, 1] without out-of-range extrapolation.
         spline = Spline(boozmn.nsb1)
 
         spline.cubic_spline_pre(self.rho_nu, self.qq_nu, boozmn.nsb1)
@@ -786,8 +794,10 @@ class Metric:
                         self.rootg_boz1[js, it, iz] = (
                             self.dphidrho[js] * self.ggb[js, it, iz])
 
-                        # skip the contravariant metric where ggsq ~ 0 (on axis)
-                        # to avoid NaN/Inf from zero division
+                        # satake debug 2026.6 : zero-division of numpy
+                        # scalars is not raised as an exception, so check
+                        # ggsq before evaluating ggup_boz; ggsq ~ 0 actually
+                        # happens on axis (rho=0)
                         if (not numpy.isfinite(ggsq)) or abs(ggsq) < 1.0e-300:
                             self.ggup_boz[js, it, iz, :, :] = 0.0
                             continue
@@ -1198,6 +1208,8 @@ class Metric:
         # --- output for checking the read data
         fd = format_double  # alias for shorten name
 
+        # satake modif. 2026.6 : radial profiles are written on the
+        # phi_hf_nu grid (nsb1 points)
         with open(file_check1, 'w') as odbg:
             if fortran_format:
                 template = "{:5}" + ("{:>24}" * 10) + '\n'
