@@ -1,3 +1,3 @@
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 
 from .bzx import bzx, Boozmn, Metric, read_GKV_metric_file
